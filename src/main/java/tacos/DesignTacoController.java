@@ -1,9 +1,16 @@
 package tacos;
 
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.ui.ModelMap;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.Errors;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.Arrays;
@@ -12,14 +19,24 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import tacos.Ingredient.Type;
 import tacos.Ingredient;
 import tacos.Taco;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
 @Slf4j
 @Controller
 @RequestMapping("/design")
-public class DesignTacoController {
+public class DesignTacoController implements WebMvcConfigurer {
+
+    private List<Ingredient> filterByType(List<Ingredient> ingredients, Type type) {
+        return ingredients.stream().filter(i -> i.getType().equals(type)).collect(Collectors.toList());
+    }
 
     @GetMapping
     public String showDesignForm(Model model) {
@@ -42,10 +59,32 @@ public class DesignTacoController {
                     filterByType(ingredients, type));
         }
         model.addAttribute("design", new Taco());
+        model.addAttribute("host", "Thinh");
         return "design";
     }
 
-    private List<Ingredient> filterByType(List<Ingredient> ingredients, Type type) {
-        return ingredients.stream().filter(i -> i.getType().equals(type)).collect(Collectors.toList());
+//
+    @PostMapping
+    public String processDesign(@Valid Design design, Errors errors) {
+
+        if(errors.hasErrors()) {
+            log.info(errors.toString());
+            return "design";
+        }
+
+        log.info("Processing design: " + design);
+
+        return "redirect:/orders/current";
     }
+
+}
+
+@Data
+class Design {
+    @NotNull
+    @Size(min=5, max=10, message = "At least 5 characters")
+    private String name;
+
+    @Size(min=1, message = "At least one ingredient")
+    private List<String> ingredients;
 }
